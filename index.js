@@ -56,7 +56,7 @@ async function run() {
               res.send({ message: "error", data: [], error:error });
         }   
     } )
-
+ 
     // cart collection 
     app.post('/carts', async (req, res)=> {
       try {
@@ -66,12 +66,8 @@ async function run() {
         res.send(result)
       } catch (error) {
         res.send(error)
-      }
-     
+      }     
     } )
-
-
-
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
