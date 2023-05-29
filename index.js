@@ -34,7 +34,7 @@ async function run() {
     const flavorDb = client.db("flavorDb");
     const menuCollection = flavorDb.collection("menu");
     const reviewsCollection = flavorDb.collection("reviews");
-    const cartCollection = flavorDb.collection("cart");
+    const cartCollection = flavorDb.collection("carts");
 
 
     app.get('/menu', async (req, res)=> {
@@ -67,6 +67,25 @@ async function run() {
       } catch (error) {
         res.send(error)
       }     
+    } )
+
+    app.get('/carts', async (req, res)=> {
+       const email = req.query.email;     
+      
+      try {
+        if(!email){
+                
+          res.send({ message: "failed no email", data: [] });
+        }else {
+          const query = { curtomer_email: email };
+        
+          const cursor = cartCollection.find(query);
+          const data = await cursor.toArray()
+          res.send({message:"ok", data:data})
+        }
+      } catch (error) {
+        res.send({ message: "query failed", data: [] });
+      }
     } )
 
     // Send a ping to confirm a successful connection
