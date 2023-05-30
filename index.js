@@ -1,6 +1,6 @@
 const express = require('express')
 const cors = require('cors')
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000
 
@@ -12,6 +12,9 @@ const app = express()
 const user = process.env.DB_USER;
 const password = process.env.DB_PASSWORD;
 
+//middleware
+app.use(cors())
+app.use(express.json())
 
 
 const uri =
@@ -33,10 +36,40 @@ async function run() {
 
     const flavorDb = client.db("flavorDb");
     const menuCollection = flavorDb.collection("menu");
+    const usersCollection = flavorDb.collection("users");
     const reviewsCollection = flavorDb.collection("reviews");
     const cartCollection = flavorDb.collection("carts");
 
+    app.get('/users', async (req, res)=> {
+      try {
+        const result = await usersCollection.find().toArray(
+          res.send({messsage:"success", data:result})
+        )
+      } catch (error) {
+        res.send({message:'error',data:[] })
+      }      
+    } )
 
+    // users related apis 
+    app.post('/users', async (req, res)=> {
+        const user = req.body 
+    
+        const userEmail = user.email       
+        const query = { email: userEmail };
+
+        const existingUser = await usersCollection.findOne(query)   
+ 
+        if(existingUser){
+         
+          return res.send({message:'user already exists'})
+        }else { 
+        
+           const result = await usersCollection.insertOne(user);
+           res.send(result);
+        }        
+    } )
+
+    // menu related apis 
     app.get('/menu', async (req, res)=> {
         try {
              const result = await menuCollection.find().toArray();
@@ -86,6 +119,16 @@ async function run() {
       } catch (error) {
         res.send({ message: "query failed", data: [] });
       }
+    } )
+
+    // delete cart item 
+    app.delete('/carts/:id' , async (req, res)=> {
+      const id = req.params.id 
+      const query = {_id : new ObjectId(id)}
+      const result = await cartCollection.deleteOne(query)
+
+      res.send(result)
+
     } )
 
     // Send a ping to confirm a successful connection
