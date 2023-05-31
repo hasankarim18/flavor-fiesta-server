@@ -2,15 +2,26 @@ const express = require('express')
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+// jwt
+const jwt = require('jsonwebtoken')
+ 
+const secret = process.env.ACCESS_TOKEN_SECRET
+
+
+
+
+
 const port = process.env.PORT || 5000
 
 
 
 const app = express()
 
-
+// middle ware 
 const user = process.env.DB_USER;
 const password = process.env.DB_PASSWORD;
+
+const verifyJWT = (req, res, next)=> {}
 
 //middleware
 app.use(cors())
@@ -40,14 +51,43 @@ async function run() {
     const reviewsCollection = flavorDb.collection("reviews");
     const cartCollection = flavorDb.collection("carts");
 
+
+    /**jwt token related apis */
+
+    app.post('/jwt', (req, res)=> {
+      const user = req.body 
+      const token = jwt.sign(user, secret, {expiresIn:'1h'})
+      
+      res.send({token})
+
+    } )
+
+    /** jwt token related apis */
+
     app.get('/users', async (req, res)=> {
+
       try {
-        const result = await usersCollection.find().toArray(
-          res.send({messsage:"success", data:result})
-        )
+          const cursor = usersCollection.find();
+          const result = await cursor.toArray();
+          res.send({ messsage: "success", data: result });
       } catch (error) {
-        res.send({message:'error',data:[] })
-      }      
+        res.send({message:"error", data:[]})
+      }
+        } )
+
+    // updating user role 
+    app.patch('/users/admin/:id', async (req, res)=> {
+        const id = req.params.id 
+        const filter = {_id : new ObjectId(id)}
+        const updateDoc = {
+          $set: {
+            role: 'admin'
+          }
+        }
+
+        const result = await usersCollection.updateOne(filter, updateDoc)
+
+        res.send(result)
     } )
 
     // users related apis 
