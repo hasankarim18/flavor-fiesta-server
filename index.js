@@ -21,11 +21,37 @@ const app = express()
 const user = process.env.DB_USER;
 const password = process.env.DB_PASSWORD;
 
-const verifyJWT = (req, res, next)=> {}
+
 
 //middleware
 app.use(cors())
 app.use(express.json())
+
+/// accesstoken middleware 
+
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+ // console.log(authorization);
+
+  if(!authorization){
+    return res.status(401).send({error:true, message:"unauthorized access"})
+  }
+
+  // bearer token 
+  const token = authorization.split(' ')[1]
+
+  jwt.verify(token,secret, (err,decoded)=> {
+    if(err){
+      return res
+        .status(403)
+        .send({ error: true, message: "unauthorized access" })
+    }
+    
+    req.decoded = decoded;
+    next()
+    })
+
+};
 
 
 const uri =
@@ -56,7 +82,7 @@ async function run() {
 
     app.post('/jwt', (req, res)=> {
       const user = req.body 
-      const token = jwt.sign(user, secret, {expiresIn:'1h'})
+      const token = jwt.sign(user, secret, {expiresIn:'4h'})
       
       res.send({token})
 
@@ -142,8 +168,16 @@ async function run() {
       }     
     } )
 
-    app.get('/carts', async (req, res)=> {
+    // cart items by email 
+
+    app.get('/carts',verifyJWT ,async (req, res)=> {
+      const decotedEmail = req.decoded.email
+   //   console.log(decotedEmail)
        const email = req.query.email;     
+
+       if(email !== decotedEmail){
+        return res.status(403).send({error:true, message: "forbidden access", data: [] });
+       }
       
       try {
         if(!email){
