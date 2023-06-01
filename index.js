@@ -6,22 +6,12 @@ require("dotenv").config();
 const jwt = require('jsonwebtoken')
  
 const secret = process.env.ACCESS_TOKEN_SECRET
-
-
-
-
-
 const port = process.env.PORT || 5000
-
-
-
 const app = express()
 
 // middle ware 
 const user = process.env.DB_USER;
 const password = process.env.DB_PASSWORD;
-
-
 
 //middleware
 app.use(cors())
@@ -69,7 +59,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    await client.connect(); 
 
     const flavorDb = client.db("flavorDb");
     const menuCollection = flavorDb.collection("menu");
@@ -87,10 +77,27 @@ async function run() {
       res.send({token})
 
     } )
+    // WARNING use veriryJWT before useing verifyAdmin
+    const verifyAdmin = async (req, res,next)=> {
+        const email = req.decoded.email
+        const query = {email:email}
+        const user = await usersCollection.findOne(query)
+
+        if(user?.role !== 'admin' ){
+          return res
+            .status(403)
+            .send({ error: true, message: "forbidden message", data: [] });
+        }
+        next();
+    }
 
     /** jwt token related apis */
 
-    app.get('/users', async (req, res)=> {
+    /**
+     * 1. use jwt token
+     */
+
+    app.get('/users',verifyJWT,verifyAdmin, async (req, res)=> {
 
       try {
           const cursor = usersCollection.find();
@@ -100,6 +107,28 @@ async function run() {
         res.send({message:"error", data:[]})
       }
         } )
+
+
+    // checking admin role 
+    // security layer: verifyJWT 
+    // email same
+    // 
+    app.get('/users/admin/:email',verifyJWT,  async (req, res)=> {
+      const decodedEmail = req.decoded.email
+     
+      const email = req.params.email 
+
+      if(decodedEmail !== email){
+        return res.status(401).send({admin:false})
+      }
+
+      const query = {email: email }
+
+      const user = await usersCollection.findOne(query)
+      const result = {admin : user?.role === 'admin'}
+      res.send(result)
+    } )
+
 
     // updating user role 
     app.patch('/users/admin/:id', async (req, res)=> {
