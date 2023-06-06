@@ -79,6 +79,7 @@ async function run() {
     const reviewsCollection = flavorDb.collection("reviews");
     const cartCollection = flavorDb.collection("carts");
     const menuCategoryCollection = flavorDb.collection("menuCategory");
+    const paymentCollection = flavorDb.collection("payments");
 
     /**
      * ***********************************************************
@@ -297,21 +298,74 @@ async function run() {
     /***
      * 1. Create payment intent
      */
-      app.post('/create-payment-intent', async (req, res)=> {
-        const {price} = req.body 
-        const amount = price*100; // 
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amount,
-          currency: "usd",
-          payment_method_types: ["card"],
-        });
+      app.post('/create-payment-intent',verifyJWT, async (req, res)=> {
+        try {
+            const { price } = req.body;
+           
+            const amount = price * 100; //
+            const paymentIntent = await stripe.paymentIntents.create({
+              amount: amount,
+              currency: "usd",
+              payment_method_types: ["card"],
+            });
 
-        res.send({
-          clientSecret: paymentIntent.client_secret,
-        });
+            res.send({
+              clientSecret: paymentIntent.client_secret,
+            });
 
+        } catch (error) {
+          res.send({
+            clientSecret: ''
+          });
+        }
+      
 
       })
+
+      /**
+       * PAYMENT RELATED API 
+       */
+      app.post('/payments',verifyJWT, async (req, res)=> {
+          const payment = req.body 
+        
+          const cartItems = payment.cartItems;
+          const insertResult = await paymentCollection.insertOne(payment)
+
+          const query = {_id:{$in: cartItems.map(id => new ObjectId(id) )}}
+
+          const deleteResult = await cartCollection.deleteMany(query)
+          res.send({insertResult, deleteResult})
+      } )
+
+      /**
+       * ADMIN RELATED ROUTES 
+       */
+
+      app.get('/admin-stats',verifyJWT, verifyAdmin, async (req, res)=> {
+          const users = await usersCollection.estimatedDocumentCount()
+          const products = await menuCollection.estimatedDocumentCount()
+          const orders = await paymentCollection.estimatedDocumentCount()
+
+          // best way to get sum of a field is to use group and sum operator
+
+          // bangla system
+          const payments = await paymentCollection.find().toArray()
+
+          const revenue = parseFloat(
+            payments
+              .reduce((sum, item) => {
+                return sum + item.price;
+              }, 0)
+              .toFixed(2)
+          );
+
+          res.send({
+            users,
+            products,
+            orders,
+            revenue
+          })
+      } )
 
 
     // Send a ping to confirm a successful connection
