@@ -368,6 +368,23 @@ async function run() {
       } )
 
 
+      /**
+       * ORDER STATS second best solution
+       * 1. load all payments
+       * 2. for each payment get the menuItems array
+       * 3. for each each item in the menuItems array get the menu item from the munu collection
+       * 4. put them in an array : all orderedItems
+       * 5. separate all orderedItems by category 
+       * 6. now get the quantity by using length: pizzas.length
+       * 7. for each category use reduct to get the total amount spent on this category
+       */
+
+      app.get('/order-stats', async (req, res)=> {
+
+      })
+
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
